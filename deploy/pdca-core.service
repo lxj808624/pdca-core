@@ -1,0 +1,20 @@
+[Unit]
+Description=PDCA Core - goal management API + static frontend
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/srv/pdca-core
+ExecStart=/usr/bin/node /srv/pdca-core/server/start.js
+Restart=always
+RestartSec=5
+User=root
+Group=root
+NoNewPrivileges=true
+PrivateTmp=true
+Environment=TZ=Asia/Shanghai
+# 口令/Token/数据库路径放这里，chmod 600，不进 git
+EnvironmentFile=-/etc/pdca-core.env
+
+[Install]
+WantedBy=multi-user.target

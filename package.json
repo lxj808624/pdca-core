@@ -1,0 +1,38 @@
+{
+  "name": "pdca-core",
+  "version": "0.1.3",
+  "private": true,
+  "type": "module",
+  "description": "PDCA 核心版：目标链 + 当下引擎 + 可配置世界观 + Agent 上岗手册",
+  "scripts": {
+    "dev:server": "node --watch server/start.js",
+    "dev:client": "npm run dev --prefix client",
+    "build": "npm run build --prefix client",
+    "start": "node server/start.js",
+    "seed": "node server/seed.js",
+    "export": "node server/export.js",
+    "snapshot": "node server/snapshot-export.js",
+    "seed:demo": "node server/seed.js --demo",
+    "test": "bash scripts/smoke.sh"
+  },
+  "dependencies": {
+    "@fastify/cors": "^10.0.1",
+    "@fastify/static": "^8.0.3",
+    "fastify": "^5.2.0"
+  },
+  "engines": {
+    "node": ">=22.13.0 <23.0.0 || >=23.4.0"
+  },
+  "license": "AGPL-3.0-or-later",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lxj808624/pdca-core.git"
+  },
+  "keywords": [
+    "pdca",
+    "goal-management",
+    "sqlite",
+    "self-hosted",
+    "agent"
+  ]
+}

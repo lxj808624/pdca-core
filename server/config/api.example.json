@@ -1,0 +1,4 @@
+{
+  "token": "填一个足够长的随机串，例如 openssl rand -hex 32 的输出",
+  "passcode": "浏览器登录口令；只给 Agent 用可以留空"
+}

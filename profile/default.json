@@ -1,0 +1,208 @@
+{
+  "_note": "示例世界观：四大类 + 一份最普通的作息表。换成你自己的只需复制本文件改一份，再用 PDCA_PROFILE 指向它；代码里不出现任何具体模块名。个人配置建议放 profile/local.json（已 gitignore）。",
+  "version": 1,
+  "brand": {
+    "appName": "PDCA Core",
+    "loginTitle": "PDCA 目标管理",
+    "loginSubtitle": "输入访问口令，登录后本设备 30 天免密"
+  },
+  "timezone": "Asia/Shanghai",
+  "modules": [
+    {
+      "name": "工作",
+      "pillar": "work",
+      "cadence": "daily"
+    },
+    {
+      "name": "学习",
+      "pillar": "growth",
+      "cadence": "daily"
+    },
+    {
+      "name": "生活",
+      "pillar": "life",
+      "cadence": "weekly"
+    },
+    {
+      "name": "健康",
+      "pillar": "health",
+      "cadence": "weekly"
+    }
+  ],
+  "pillars": [
+    {
+      "key": "work",
+      "label": "工作",
+      "full": "事业与交付",
+      "desc": "把手上的事做成、交付出去"
+    },
+    {
+      "key": "growth",
+      "label": "学习",
+      "full": "能力增长",
+      "desc": "读书、练习、把学到的东西用起来"
+    },
+    {
+      "key": "life",
+      "label": "生活",
+      "full": "生活与人",
+      "desc": "家人、朋友、家务与日常"
+    },
+    {
+      "key": "health",
+      "label": "健康",
+      "full": "身体与精力",
+      "desc": "睡眠、运动、饮食与情绪"
+    }
+  ],
+  "dimensions": [
+    "三年计划",
+    "年计划",
+    "季度计划",
+    "月计划",
+    "周计划",
+    "日计划"
+  ],
+  "priorities": [
+    "P0",
+    "P1",
+    "P2"
+  ],
+  "statuses": [
+    "进行中",
+    "未完成",
+    "已完成",
+    "已调整",
+    "已放弃"
+  ],
+  "rules": {
+    "mainlineLimit": 3,
+    "requirePriority": true,
+    "requireParentChain": false,
+    "subLineSplit": false
+  },
+  "schedule": {
+    "sleep": {
+      "start": "23:30",
+      "end": "07:00",
+      "module": "睡觉",
+      "label": "睡觉时间",
+      "note": "这段时间优先做的事情就是睡觉",
+      "tip": "睡前可以读书或听点东西。"
+    },
+    "daily": [
+      {
+        "time": "07:00",
+        "name": "昨日回顾",
+        "type": "回顾",
+        "module": null,
+        "window": 60,
+        "days": "all",
+        "inSleep": true
+      },
+      {
+        "time": "08:00",
+        "name": "工作 Plan",
+        "type": "Plan",
+        "module": "工作",
+        "window": 600,
+        "days": "workday"
+      },
+      {
+        "time": "08:00",
+        "name": "生活 Plan",
+        "type": "Plan",
+        "module": "生活",
+        "window": 600,
+        "days": "offday"
+      },
+      {
+        "time": "18:00",
+        "name": "工作 Check",
+        "type": "Check",
+        "module": "工作",
+        "window": 15,
+        "days": "workday"
+      },
+      {
+        "time": "18:00",
+        "name": "生活 Check",
+        "type": "Check",
+        "module": "生活",
+        "window": 15,
+        "days": "offday"
+      },
+      {
+        "time": "18:15",
+        "name": "学习 Plan",
+        "type": "Plan",
+        "module": "学习",
+        "window": 75,
+        "days": "all"
+      },
+      {
+        "time": "19:30",
+        "name": "学习 Check",
+        "type": "Check",
+        "module": "学习",
+        "window": 15,
+        "days": "all"
+      },
+      {
+        "time": "19:45",
+        "name": "健康 Plan",
+        "type": "Plan",
+        "module": "健康",
+        "window": 105,
+        "days": "all"
+      },
+      {
+        "time": "21:30",
+        "name": "健康 Check",
+        "type": "Check",
+        "module": "健康",
+        "window": 30,
+        "days": "all"
+      },
+      {
+        "time": "22:00",
+        "name": "收尾与缓冲",
+        "type": "记录",
+        "module": null,
+        "window": 90,
+        "days": "all"
+      }
+    ],
+    "weekly": [
+      {
+        "dayOfWeek": 0,
+        "time": "20:00",
+        "name": "每周审视",
+        "type": "审视",
+        "module": null,
+        "window": 60
+      }
+    ],
+    "monthly": [
+      {
+        "day": 28,
+        "time": "21:30",
+        "name": "每月审视",
+        "type": "审视",
+        "module": null,
+        "window": 60
+      }
+    ],
+    "yearly": [
+      {
+        "month": 12,
+        "day": 31,
+        "time": "20:00",
+        "name": "年审视",
+        "type": "审视",
+        "module": null,
+        "window": 120
+      }
+    ]
+  }
+}
