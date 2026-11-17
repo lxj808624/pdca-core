@@ -46,12 +46,12 @@
 | M5 | 交付就绪：首启引导 + 备份/恢复 + Node 版本自检 + 2027 日历 + 演示数据 + 截图/FAQ/LICENSE | ✅ 空库引导卡可见；`seed:demo`/`backup` 实跑通过；2027 调休判定正确；部署只保留裸机（Docker 已移除） |
 | M6 | 私有仓（GitHub private）+ 首个里程碑推送 | ✅ `lxj808624/pdca-core`（private，main） |
 | M7 | v0.1.0 交付收尾：默认世界观中性化、AGPL 授权、冒烟测试、README/截图与代码对齐 | ✅ 默认 profile 换示例四类；`npm test` 23 项全绿；README 与录入 UI/模块优先级一致；截图重拍 |
-| M8 | v0.1.3 开源：仓库转 public（仅此仓库），README/LICENSE 去私有措辞 | ✅ GitHub 公开可匿名访问；Actions 绿；其他仓库保持私有 |
+| M8 | v0.1.3 开源：仓库转 public，README/LICENSE 去私有措辞 | ✅ GitHub 公开可匿名访问；Actions 绿 |
 
 ### toC 试用版（`PDCA_MODE=cloud`，2026-11-13 起；**2026-11-16 下线，代码已从 main 移除**）
 
 > 下线原因：面向普通用户后，产品性质与「自托管模板」差别太大（账号、引导、模块划分、运营与隐私都要另做一套），决定只做自托管版。
-> 处置：`server/cloud.js`、`deploy/*cloud*`、多租户路由与前端云入口已删除；下表 C1–C4 是最初的验收记录，留作历史。要重启这条线从 tag `toc-archive-20261113` 取回。
+> 处置：`server/cloud.js`、`deploy/*cloud*`、多租户路由与前端云入口已删除；下表 C1–C4 是最初的验收记录，留作历史；相关代码已从仓库移除。
 
 定位：普通个人用户、先免费验证需求、轻量 Web、完整录入 UI。单仓双模式，引擎共用。
 

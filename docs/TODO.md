@@ -24,9 +24,8 @@
 - [x] 演示数据按用户模块生成，自定义模块 / 无时段表也能用
 - [x] README 重写：录入 UI、模块优先级（`meta.modules` > `profile.modules`）、排障表
 - [x] 截图重拍（当下 / 目标链 / 新建目标 / 复盘 / 空库引导）
-- [x] `CHANGELOG.md` + tag `v0.1.0` / `v0.1.1` / `v0.1.2` / `v0.1.3`
-- [x] 仓库开源（2026-11-17，仅 `pdca-core` 一个仓库转 public）
-- [x] `sde-ip` 登记 `pdca-core`（2026-11-17：STATUS 产品总览 + products 索引 + 管理卡，已提交）
+- [x] `CHANGELOG.md` + tag `v0.1.3`（历史压缩后仅保留此 tag）
+- [x] 仓库开源（2026-11-17，v0.1.3）
 
 ## 后续优化
 

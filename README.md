@@ -1,16 +1,42 @@
 # PDCA Core
 
-六级目标链 + 「现在该做什么」引擎 + 可配置世界观 + Agent 上岗手册。
+**给 Agent 用的目标管理系统。** 你用自然语言说目标，Agent 通过 API 写进去；页面负责展示，并告诉你现在该做什么。
 
-从个人自用版 `pdca-dashboard` 抽出来的**可分发核心版**：人名、模块、作息表、校验强度全部收进 `profile/`，换一份配置就是一套属于你自己的目标管理系统。代码里不出现任何具体模块名。
-
-> 状态：`v0.1.3`。仓库已开源：<https://github.com/lxj808624/pdca-core>，按 [AGPL-3.0-or-later](LICENSE) 使用。
->
-> 公开的只有这一个仓库；个人自用版 `pdca-dashboard` 与 SDE·IP 的其他项目都不对外。
->
-> 只做自托管形态：一个进程、一个 SQLite 文件、一个访问口令。此前的多租户注册版已下线，需要时从 tag `toc-archive-20261113` 取回。
+[![CI](https://github.com/lxj808624/pdca-core/actions/workflows/test.yml/badge.svg)](https://github.com/lxj808624/pdca-core/actions/workflows/test.yml)
+[![License: AGPL-3.0-or-later](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue.svg)](LICENSE)
 
 ![当下](docs/screenshots/now.png)
+
+## 30 秒跑起来
+
+需要 **Node.js ≥ 22.13**（数据库用内置 `node:sqlite`）。`npm test` 走 bash 脚本，Windows 上用 WSL 或 Git Bash。
+
+```bash
+npm install && npm install --prefix client
+npm run build
+npm start            # http://localhost:3000
+```
+
+空库自动建表。第一次打开会走两步：先选「就一张清单」还是「分几个类别」，再建第一个目标。
+
+想先看有数据的样子：
+
+```bash
+npm run seed:demo
+```
+
+**部署到公网必须配 `PDCA_PASSCODE` + `PDCA_API_TOKEN`；不配只适合本地开发。**
+
+## 它是什么
+
+- **六级目标链**：三年 → 年 → 季度 → 月 → 周 → 日，`parent_id` 串起来，向上可追溯。
+- **当下引擎**：结合时段、状态和优先级，回答「现在该做什么、今天还差什么」。
+- **硬校验**：主线数量、子业务线、目标链完整性、优先级必填，规则由 profile 决定，Agent 绕不过去。
+- **可配置世界观**：模块、支柱、维度、作息表、校验强度都在 `profile/`，换一份配置就是另一套系统。
+- **Agent 上岗手册**：`AGENTS.md` + `agent/skills/pdca/`，换任何 Agent 都不丢用法。
+
+适合：想让 Agent 长期管目标、又不想把目标交给 SaaS 的人。
+不适合：需要多人协作、账号体系、手机推送的人——这些都没做。也不提供 Docker。
 
 <details>
 <summary>目标链 / 新建目标 / 复盘 长什么样</summary>
@@ -22,39 +48,6 @@
 ![新建目标](docs/screenshots/form-new.png)
 ![复盘](docs/screenshots/check.png)
 </details>
-
-## 它是什么
-
-- **六级目标链**：三年 → 年 → 季度 → 月 → 周 → 日，`parent_id` 串起来，向上可追溯。
-- **当下引擎**：结合当前时段、目标状态与优先级，回答「现在该做什么、今天还差什么」。
-- **目标详情**：单条目标的上下游链、子目标、Plan / KPI / Check / Act 备注、变更日志。
-- **硬校验**：主线数量、子业务线、目标链完整性、优先级必填，规则强度由 profile 决定。
-- **Agent 上岗手册**：`AGENTS.md` + `agent/skills/pdca/`，换任何 Agent 都不丢能力。
-
-不包含：账号体系、多租户、提醒推送、习惯打卡、时间线、Docker。提醒交给使用者自己的 Agent 或系统日历。
-
-## 30 秒跑起来
-
-需要 **Node.js ≥ 22.13**（数据库用内置 `node:sqlite`；22.13 之前要额外开 flag，本项目不依赖 flag）。版本不够时启动自检会给中文提示。`npm test` 走 bash 脚本，Windows 上用 WSL 或 Git Bash。
-
-```bash
-npm install && npm install --prefix client
-npm run build
-npm start            # http://localhost:3000
-```
-
-空库自动建表，不需要预先导入。第一次打开浏览器会走两步引导：
-
-![第一次上手](docs/screenshots/now-empty.png)
-
-1. **你的目标要分类吗**：选「就一张清单」= 所有目标放一起按优先级排；选「分几个类别」= 挑现成的或自己起名（最多 8 个，每个 ≤12 字）。
-2. **建第一个目标**：填名称 + 时间范围（+ 类别，如果上一步分了类）。
-
-想先看有数据的样子：`npm run seed:demo`（写 7 条按今天生成的演示目标，幂等，重跑覆盖同 id；服务在跑也能导，导完刷新页面）。
-
-想导入自己的旧快照：`cp data/seed.example.ndjson data/seed.ndjson && npm run seed`（示例是 5 条历史目标，先改成自己的字段再导）。
-
-不配 `PDCA_PASSCODE` 时是本地开发模式（读写全放行）；**部署到公网必须配口令 + token**。
 
 ## 三页做什么
 
