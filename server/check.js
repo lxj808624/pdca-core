@@ -4,9 +4,11 @@ import { buildNowPayload, todayTasks, zonedParts, goalInModule, timeBlocksSettin
 import { userModules } from './usermodules.js';
 import { SUBLINES_OF, baseModule, isWeeklyCadence, cadenceOf, hasGoalCadence } from './modules.js';
 import { sameMainlineGroup, subModuleOf } from './validate.js';
+import { tr, labelOf } from './i18n.js';
 
-export function buildCheckPayload(db, date = new Date()) {
-  const now = buildNowPayload(db, date);
+export function buildCheckPayload(db, date = new Date(), lang = 'zh') {
+  const trr = (zh, en) => tr(lang, zh, en);
+  const now = buildNowPayload(db, date, { lang });
   // 看全天日排班，不受当前时段或周/月/年仪式覆盖影响；周更模块不催建日目标。
   // 「周更」按 modules.js 的 cadence 判定，不看当天有没有日网格档：
   // 周更模块排的网格是执行周目标的时间块，最小周期是周。
@@ -44,8 +46,8 @@ export function buildCheckPayload(db, date = new Date()) {
   if (missingModules.length) {
     deviations.push({
       level: 'warn',
-      type: '今日目标未建',
-      detail: `${missingModules.join('、')} 今日尚无日目标，请在对应 Plan 时段补建`
+      type: trr('今日目标未建', 'Missing daily goal'),
+      detail: trr(`${missingModules.map((m) => labelOf(lang, m)).join('、')} 今日尚无日目标，请在对应 Plan 时段补建`, `No daily goal yet for ${missingModules.map((m) => labelOf(lang, m)).join(', ')}; add one in the matching Plan block`)
     });
   }
 
@@ -62,8 +64,8 @@ export function buildCheckPayload(db, date = new Date()) {
     const label = `${group[0].module}${sub ? `·${sub}` : ''}`;
     deviations.push({
       level: 'warn',
-      type: '主线超标',
-      detail: `${label} 本周同周期进行中的主线有 ${group.length} 条（上限 3）：${group.map((g) => g.name).join('、')}，建议顺延低优先级项`
+      type: trr('主线超标', 'Too many active goals'),
+      detail: trr(`${label} 本周同周期进行中的主线有 ${group.length} 条（上限 3）：${group.map((g) => g.name).join('、')}，建议顺延低优先级项`, `${label} has ${group.length} active goals this week (limit 3): ${group.map((g) => g.name).join(', ')}. Move a lower-priority item to next week`)
     });
   }
 
@@ -76,8 +78,8 @@ export function buildCheckPayload(db, date = new Date()) {
     if (mixed.length) {
       deviations.push({
         level: 'warn',
-        type: `${mod} 子业务线缺失`,
-        detail: `${mixed.length} 条进行中目标未区分子业务线：${mixed.map((g) => g.name).join('、')}`
+        type: trr(`${labelOf(lang, mod)} 子业务线缺失`, `${labelOf(lang, mod)} sub-line missing`),
+        detail: trr(`${mixed.length} 条进行中目标未区分子业务线：${mixed.map((g) => g.name).join('、')}`, `${mixed.length} active goal(s) do not name a sub-line: ${mixed.map((g) => g.name).join(', ')}`)
       });
     }
   }

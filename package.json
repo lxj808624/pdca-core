@@ -1,6 +1,6 @@
 {
   "name": "pdca-core",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "private": true,
   "type": "module",
   "description": "PDCA 核心版：目标链 + 当下引擎 + 可配置世界观 + Agent 上岗手册",

@@ -2,6 +2,8 @@
 
 **给 Agent 用的目标管理系统。** 你用自然语言说目标，Agent 通过 API 写进去；页面负责展示，并告诉你现在该做什么。
 
+[English](README.en.md) · 中文
+
 [![CI](https://github.com/lxj808624/pdca-core/actions/workflows/test.yml/badge.svg)](https://github.com/lxj808624/pdca-core/actions/workflows/test.yml)
 [![License: AGPL-3.0-or-later](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue.svg)](LICENSE)
 
@@ -26,6 +28,14 @@ npm run seed:demo
 ```
 
 **部署到公网必须配 `PDCA_PASSCODE` + `PDCA_API_TOKEN`；不配只适合本地开发。**
+
+## PDCA 是什么
+
+PDCA 是 **Plan（计划）→ Do（执行）→ Check（检查）→ Act（处理）** 的循环：先定目标和做法，做完看结果，找出偏差，再把有效的部分留到下一轮。它不要求一次做对，只要求每一轮都比上一轮更接近目标。
+
+这个项目把循环落在一条目标链上：Plan 写目标和做法，Do 在「当下」页推进，Check 在「复盘」页看完成率和偏差，Act 把结论写回目标，进入下一轮。
+
+延伸阅读：[PDCA 循环（百度百科）](https://baike.baidu.com/item/PDCA%E5%BE%AA%E7%8E%AF)
 
 ## 它是什么
 

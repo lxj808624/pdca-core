@@ -123,15 +123,37 @@ export function cookieHeader(req, value, { clear = false } = {}) {
 }
 
 /** 登录页：单文件内联，不引用前端产物（未登录时静态资源一律拿不到也不需要） */
-export function loginPage({ error = '' } = {}) {
+export function loginPage({ error = '', lang = 'zh' } = {}) {
+  const en = lang === 'en';
+  const L = en ? {
+    title: BRAND.appName || 'PDCA Core',
+    subtitle: 'Enter the access passcode. This device stays signed in for 30 days.',
+    passcode: 'Access passcode',
+    unlock: 'Unlock',
+    checking: 'Checking…',
+    tip: 'Too many wrong attempts will be temporarily blocked.',
+    badPass: 'Wrong passcode',
+    tooMany: 'Too many attempts. Try again later.',
+    notConfigured: 'Passcode is not configured on the server.',
+    htmlLang: 'en'
+  } : {
+    title: BRAND.loginTitle || 'PDCA 目标管理',
+    subtitle: BRAND.loginSubtitle || '输入访问口令，登录后本设备 30 天免密',
+    passcode: '访问口令',
+    unlock: '解锁',
+    checking: '验证中…',
+    tip: '连续输错会被临时限制尝试。',
+    badPass: '口令错误',
+    tooMany: '尝试过于频繁，请稍后再试',
+    notConfigured: '服务端尚未配置访问口令。',
+    htmlLang: 'zh-CN'
+  };
   const msg = error ? `<p class="err">${error}</p>` : '';
-  const title = BRAND.loginTitle || 'PDCA 目标管理';
-  const subtitle = BRAND.loginSubtitle || '输入访问口令，登录后本设备 30 天免密';
   return `<!doctype html>
-<html lang="zh-CN"><head>
+<html lang="${L.htmlLang}"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
-<title>${title} · 解锁</title>
+<title>${L.title} · ${L.unlock}</title>
 <style>
   *{box-sizing:border-box}
   body{margin:0;min-height:100vh;display:grid;place-items:center;background:#f4f6f9;color:#16181d;
@@ -151,33 +173,37 @@ export function loginPage({ error = '' } = {}) {
 </style></head>
 <body>
 <form id="f">
-  <h1>${title}</h1>
-  <p class="sub">${subtitle}</p>
+  <h1>${L.title}</h1>
+  <p class="sub">${L.subtitle}</p>
   ${msg}
-  <input id="p" type="password" name="passcode" placeholder="访问口令" autocomplete="current-password" autofocus required>
-  <button id="b" type="submit">解锁</button>
-  <p class="tip">连续输错会被临时限制尝试。</p>
+  <input id="p" type="password" name="passcode" placeholder="${L.passcode}" autocomplete="current-password" autofocus required>
+  <button id="b" type="submit">${L.unlock}</button>
+  <p class="tip">${L.tip}</p>
 </form>
 <script>
+  const I18N = ${JSON.stringify({ unlock: L.unlock, checking: L.checking, badPass: L.badPass, tooMany: L.tooMany, notConfigured: L.notConfigured })};
   const f = document.getElementById('f'), p = document.getElementById('p'), b = document.getElementById('b');
   f.addEventListener('submit', async (e) => {
     e.preventDefault();
-    b.disabled = true; b.textContent = '验证中…';
+    b.disabled = true; b.textContent = I18N.checking;
     try {
       const res = await fetch('/api/login', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Accept-Language': ${JSON.stringify(L.htmlLang)} },
         body: JSON.stringify({ passcode: p.value })
       });
       if (res.ok) { location.replace('/'); return; }
       const data = await res.json().catch(() => ({}));
-      b.disabled = false; b.textContent = '解锁';
+      b.disabled = false; b.textContent = I18N.unlock;
       let old = f.querySelector('.err'); if (old) old.remove();
       const el = document.createElement('p'); el.className = 'err';
-      el.textContent = res.status === 429 ? '尝试过于频繁，请稍后再试' : (data.error || '口令错误');
+      el.textContent = res.status === 429 ? I18N.tooMany
+        : res.status === 401 ? I18N.badPass
+        : res.status === 503 ? I18N.notConfigured
+        : (data.error || I18N.badPass);
       f.insertBefore(el, p); p.value = ''; p.focus();
     } catch {
-      b.disabled = false; b.textContent = '解锁';
+      b.disabled = false; b.textContent = I18N.unlock;
     }
   });
 </script>

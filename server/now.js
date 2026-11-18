@@ -2,6 +2,7 @@
 import { priorityRank, getMeta } from './db.js';
 import { dayTypeOf, dayTypeLabel, holidayOf, coverageOf, WORKDAY, OFFDAY } from './calendar.js';
 import { MODULES, SLOT_MODULES, PILLAR_OF, baseModule, subLineOf, isWeeklyCadence, cadenceOf, hasGoalCadence } from './modules.js';
+import { tr, labelOf } from './i18n.js';
 import { PROFILE, TZ } from './profile.js';
 import { userModules } from './usermodules.js';
 
@@ -367,7 +368,8 @@ export function timeBlocksSetting(db) {
   return { on: PROFILE.schedule?.enabled !== false, choice: 'unset' };
 }
 
-export function buildNowPayload(db, now = new Date(), { awake = false } = {}) {
+export function buildNowPayload(db, now = new Date(), { awake = false, lang = 'zh' } = {}) {
+  const trr = (zh, en) => tr(lang, zh, en);
   const p = zonedParts(now);
   const tb = timeBlocksSetting(db);
   const timeBlocks = tb.on;
@@ -423,7 +425,7 @@ export function buildNowPayload(db, now = new Date(), { awake = false } = {}) {
       task: dayGoalView(g).task,
       kpi: g.kpi,
       reason: timeBlocks
-        ? (s.aligned ? '匹配当前时段，推进已制定的目标' : '不属于当前时段模块，今日仍要完成（收进折叠区，仅备查）')
+        ? (s.aligned ? trr('匹配当前时段，推进已制定的目标', 'Matches the current time block') : trr('不属于当前时段模块，今日仍要完成（收进折叠区，仅备查）', 'Outside the current time block, but still due today'))
         : null,
       module: g.module,
       priority: g.priority,
@@ -447,29 +449,29 @@ export function buildNowPayload(db, now = new Date(), { awake = false } = {}) {
       ranked.push({
         source: 'planning',
         id: `plan-${mod}`,
-        name: `立即设定${weekly ? '本周' : '今天'}的${mod}目标`,
-        task: `立即设定${weekly ? '本周' : '今天'}的${mod}目标`,
+        name: trr(`立即设定${weekly ? '本周' : '今天'}的${labelOf(lang, mod)}目标`, `Set a ${weekly ? 'weekly' : 'daily'} goal for ${labelOf(lang, mod)}`),
+        task: trr(`立即设定${weekly ? '本周' : '今天'}的${labelOf(lang, mod)}目标`, `Set a ${weekly ? 'weekly' : 'daily'} goal for ${labelOf(lang, mod)}`),
         module: mod,
         priority: 'P0',
         status: '待制定',
         score: SCORE.planning,
         aligned: true,
         pinned: true,
-        reason: `${mod} ${weekly ? '本周' : '今天'}还没有目标 · ${parent ? `可从上级拆解：${parent.plan || parent.name}` : '先花几分钟定下要做什么再行动'}`,
+        reason: trr(`${labelOf(lang, mod)} ${weekly ? '本周' : '今天'}还没有目标 · ${parent ? `可从上级拆解：${parent.plan || parent.name}` : '先花几分钟定下要做什么再行动'}`, `${labelOf(lang, mod)} has no ${weekly ? 'weekly' : 'daily'} goal yet · ${parent ? `break it down from: ${parent.plan || parent.name}` : 'take a few minutes to decide the next step'}`),
         createdAt: ''
       });
     } else if (active?.type === 'Check' && relevant.some((g) => ['进行中', '未完成'].includes(g.status))) {
       ranked.push({
         source: 'review',
         id: `review-${mod}`,
-        name: `复盘${mod}${weekly ? '本周' : '今日'}目标`,
-        task: `复盘${mod}${weekly ? '本周' : '今日'}目标`,
+        name: trr(`复盘${labelOf(lang, mod)}${weekly ? '本周' : '今日'}目标`, `Review ${labelOf(lang, mod)} ${weekly ? 'weekly' : 'daily'} goals`),
+        task: trr(`复盘${labelOf(lang, mod)}${weekly ? '本周' : '今日'}目标`, `Review ${labelOf(lang, mod)} ${weekly ? 'weekly' : 'daily'} goals`),
         module: mod,
         score: SCORE.review,
         priority: 'P0',
         status: '待复盘',
         aligned: true,
-        reason: '已到 Check 时段，验收产出并确定下一步',
+        reason: trr('已到 Check 时段，验收产出并确定下一步', 'Check time: verify output and decide the next step'),
         createdAt: ''
       });
     }
@@ -484,7 +486,7 @@ export function buildNowPayload(db, now = new Date(), { awake = false } = {}) {
       score: SCORE.review,
       priority: 'P0',
       status: '待复盘',
-      reason: active.type === '回顾' ? '回顾昨日执行情况，确认未完成项与下一步' : '检查本周期目标完成情况、偏移与目标链完整性',
+      reason: active.type === '回顾' ? trr('回顾昨日执行情况，确认未完成项与下一步', 'Review yesterday, confirm open items and the next step') : trr('检查本周期目标完成情况、偏移与目标链完整性', 'Check completion, deviations and goal-chain integrity for this period'),
       createdAt: ''
     });
   }
@@ -538,8 +540,8 @@ export function buildNowPayload(db, now = new Date(), { awake = false } = {}) {
     .map(dayGoalView);
 
   const recommendation = sleeping && !awake
-    ? { source: 'sleep', task: '现在，安心睡眠', reason: `${SLEEP.start}–${SLEEP.end} 是睡眠时间，明早再继续。`, score: null }
-    : ranked[0] ?? { source: 'idle', task: '当前事项已处理完', reason: '可以休息，或到 Plan 查看后续安排。', score: null };
+    ? { source: 'sleep', task: trr('现在，安心睡眠', 'Sleep now'), reason: trr(`${SLEEP.start}–${SLEEP.end} 是睡眠时间，明早再继续。`, `${SLEEP.start}–${SLEEP.end} is sleep time. Pick it up tomorrow morning.`), score: null }
+    : ranked[0] ?? { source: 'idle', task: trr('当前事项已处理完', 'Nothing left on deck'), reason: trr('可以休息，或到 Plan 查看后续安排。', 'Take a break, or check Goals for what is next.'), score: null };
   const advice = { headline: recommendation.task, detail: recommendation.reason };
 
   return {

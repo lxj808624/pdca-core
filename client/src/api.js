@@ -1,9 +1,13 @@
 // 前端写入通道：所有写入直接进后端，硬校验（validate.js）仍只在服务端，前端不复刻规则。
 // 401 一律踢回登录页（口令会话过期时走这里）。
+import { getLang } from './i18n.js';
 async function request(url, { method = 'GET', body } = {}) {
   const res = await window.fetch(url, {
     method,
-    headers: body ? { 'Content-Type': 'application/json' } : undefined,
+    headers: {
+      'Accept-Language': getLang() === 'en' ? 'en' : 'zh-CN',
+      ...(body ? { 'Content-Type': 'application/json' } : {})
+    },
     body: body ? JSON.stringify(body) : undefined
   });
   if (res.status === 401) {

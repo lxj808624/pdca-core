@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { t, label, weekdayName, monthName, getLang, setLang, useLang } from './i18n.js';
 import { fetchProfile, fetchNow, fetchGoals, fetchCheck, fetchGoal, createGoal, updateGoal, deleteGoal, logout, saveSettings, saveModules } from './api.js';
 
 // ============================================================
@@ -13,7 +14,7 @@ import { fetchProfile, fetchNow, fetchGoals, fetchCheck, fetchGoal, createGoal, 
 // 前端不留任何世界观硬编码——换 profile 就换一套系统。
 // ============================================================
 
-const WEEKDAYS = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+
 
 // 模块基名：剥掉子业务线后缀，把「工作 开发」归回「工作」
 function baseModule(v, modules) {
@@ -38,7 +39,7 @@ function PrioChip({ p }) {
 
 function StatusChip({ s }) {
   if (!s) return null;
-  return <span className={`chip status status-${s}`}>{s}</span>;
+  return <span className={`chip status status-${s}`}>{label(s)}</span>;
 }
 
 // ---------- 数据 hook ----------
@@ -78,15 +79,16 @@ function TopBar({ page, onPage, brand, clock }) {
             className={`nav-tab${page === p.key ? ' nav-tab-active' : ''}`}
             onClick={() => onPage(p.key)}
           >
-            {p.label}
+            {t(p.label)}
           </button>
         ))}
       </nav>
       <span className="clock">{clock}</span>
+      <button className="topbar-out" onClick={() => setLang(getLang() === 'en' ? 'zh' : 'en')}>{getLang() === 'en' ? '中文' : 'EN'}</button>
       <button className="topbar-out" onClick={async () => {
         try { await logout(); } catch { /* 会话已失效也照样跳转 */ }
         window.location.replace('/login');
-      }}>退出</button>
+      }}>{t('退出')}</button>
     </header>
   );
 }
@@ -99,25 +101,25 @@ function NowSlot({ now }) {
   if (sleeping) {
     return (
       <section className="hero">
-        <div className="hero-eyebrow">{today?.dateLabel} · {today?.weekday ? WEEKDAYS[today.weekday] : ''}</div>
-        <h1 className="hero-headline">睡觉时间</h1>
-        <p className="hero-detail">明早再继续。</p>
+        <div className="hero-eyebrow">{today?.dateLabel} · {today?.weekday ? weekdayName(today.weekday) : ''}</div>
+        <h1 className="hero-headline">{t('睡觉时间')}</h1>
+        <p className="hero-detail">{t('明早再继续。')}</p>
       </section>
     );
   }
 
-  const task = recommendation?.task ?? (todayStats?.total ? '今天的事都做完了' : '今天还没有安排');
+  const task = recommendation?.task ?? (todayStats?.total ? t('今天的事都做完了') : t('今天还没有安排'));
   const detail = recommendation?.reason ?? '';
 
   return (
     <section className="hero">
       <div className="hero-eyebrow">
-        {today?.dateLabel} {today?.weekday ? WEEKDAYS[today.weekday] : ''}
+        {today?.dateLabel} {today?.weekday ? weekdayName(today.weekday) : ''}
         {timeBlocks === false
-          ? ` · 今天 ${todayStats?.total ?? 0} 件，已完成 ${todayStats?.done ?? 0} 件`
-          : activeTask ? ` · ${activeTask.time}–${activeTask.to ?? ''} ${activeTask.name}` : ''}
+          ? ` · ${t('今天 {n} 件，已完成 {m} 件', { n: todayStats?.total ?? 0, m: todayStats?.done ?? 0 })}`
+          : activeTask ? ` · ${activeTask.time}–${activeTask.to ?? ''} ${label(activeTask.name)}` : ''}
       </div>
-      <p className="hero-kicker">{timeBlocks === false ? '先做这件' : '现在该做'}</p>
+      <p className="hero-kicker">{timeBlocks === false ? t('先做这件') : t('现在该做')}</p>
       <h1 className="hero-headline">{task}</h1>
       {detail ? <p className="hero-detail">{detail}</p> : null}
     </section>
@@ -145,7 +147,7 @@ function NowRow({ item, index, onOpen, singleModule }) {
         <div className="rec-name">
           {stripName(item.name)}
           <PrioChip p={item.priority} />
-          {showModule ? <span className="chip module-chip">{item.module}</span> : null}
+          {showModule ? <span className="chip module-chip">{label(item.module)}</span> : null}
           {showStatus ? <StatusChip s={item.status} /> : null}
         </div>
         {item.source !== 'pdca' && item.reason ? <div className="rec-reason">{item.reason}</div> : null}
@@ -170,7 +172,7 @@ function Onboarding({ profile, onCreate }) {
     try {
       await saveModules(modules);
     } catch (e) {
-      setErr(e.payload?.error || '没保存成功，再试一次');
+      setErr(e.payload?.error || t('没保存成功，再试一次'));
       setBusy(false);
       return;
     }
@@ -188,66 +190,66 @@ function Onboarding({ profile, onCreate }) {
 
   return (
     <section className="card onboard">
-      <p className="onboard-eyebrow">第一次使用 · 两步就好</p>
+      <p className="onboard-eyebrow">{t('第一次使用 · 两步就好')}</p>
       {step === 'modules' ? (
         <>
-          <h2 className="onboard-title">你的目标要分类吗？</h2>
-          <p className="onboard-lead">分类之后，目标会分到「工作 / 学习 / 健康」这样的格子里。不分类就是一张清单，更省事。</p>
+          <h2 className="onboard-title">{t('你的目标要分类吗？')}</h2>
+          <p className="onboard-lead">{t('分类之后，目标会分到「工作 / 学习 / 健康」这样的格子里。不分类就是一张清单，更省事。')}</p>
           <div className="choice-list">
             <button className="choice-card" disabled={busy} onClick={() => save([])}>
-              <b>就一张清单</b>
-              <span>所有目标放在一起，按优先级排</span>
+              <b>{t('就一张清单')}</b>
+              <span>{t('所有目标放在一起，按优先级排')}</span>
             </button>
             <button className="choice-card" disabled={busy} onClick={() => setStep('pick')}>
-              <b>分几个类别</b>
-              <span>每类单独一条线，适合事情多、方向杂</span>
+              <b>{t('分几个类别')}</b>
+              <span>{t('每类单独一条线，适合事情多、方向杂')}</span>
             </button>
           </div>
           {err ? <p className="form-errors-inline">{err}</p> : null}
         </>
       ) : step === 'pick' ? (
         <>
-          <h2 className="onboard-title">选几个类别</h2>
-          <p className="onboard-lead">挑现成的，或者自己起名字，最多 8 个。之后想改跟 Agent 说一声。</p>
+          <h2 className="onboard-title">{t('选几个类别')}</h2>
+          <p className="onboard-lead">{t('挑现成的，或者自己起名字，最多 8 个。之后想改跟 Agent 说一声。')}</p>
           <div className="chip-pick">
             {PRESETS.map((name) => (
               <button
                 key={name}
                 className={`pick-chip${picked.includes(name) ? ' pick-chip-on' : ''}`}
                 onClick={() => toggle(name)}
-              >{name}</button>
+              >{label(name)}</button>
             ))}
           </div>
           <div className="custom-row">
             <input
               value={custom}
               onChange={(e) => setCustom(e.target.value)}
-              placeholder="自己起一个，例如「副业」"
+              placeholder={t('自己起一个，例如「副业」')}
               maxLength={12}
             />
-            <button className="btn-ghost" onClick={() => { if (custom.trim()) { toggle(custom.trim()); setCustom(''); } }}>加上</button>
+            <button className="btn-ghost" onClick={() => { if (custom.trim()) { toggle(custom.trim()); setCustom(''); } }}>{t('加上')}</button>
           </div>
-          {picked.length ? <p className="onboard-lead">已选：{picked.join(' / ')}</p> : null}
+          {picked.length ? <p className="onboard-lead">{t('已选：{names}', { names: picked.map(label).join(' / ') })}</p> : null}
           {err ? <p className="form-errors-inline">{err}</p> : null}
           <div className="onboard-cta">
-            <button className="btn-ghost" disabled={busy} onClick={() => setStep('modules')}>返回</button>
+            <button className="btn-ghost" disabled={busy} onClick={() => setStep('modules')}>{t('返回')}</button>
             <button className="btn-primary" disabled={busy || !picked.length} onClick={() => save(picked)}>
-              {busy ? '保存中…' : '就这些'}
+              {busy ? t('保存中…') : t('就这些')}
             </button>
           </div>
         </>
       ) : (
         <>
-          <h2 className="onboard-title">建第一个目标</h2>
+          <h2 className="onboard-title">{t('建第一个目标')}</h2>
           <p className="onboard-lead">
             {profile?.singleModule
-              ? '写一句你要做成的事，选个时间范围就行。'
-              : '写一句你要做成的事，选个类别和时间范围。'}
+              ? t('写一句你要做成的事，选个时间范围就行。')
+              : t('写一句你要做成的事，选个类别和时间范围。')}
           </p>
           <div className="onboard-cta">
-            <button className="btn-primary" onClick={onCreate}>建第一个目标</button>
+            <button className="btn-primary" onClick={onCreate}>{t('建第一个目标')}</button>
           </div>
-          <p className="onboard-foot">建完之后，它会出现在「今天」的清单里。</p>
+          <p className="onboard-foot">{t('建完之后，它会出现在「今天」的清单里。')}</p>
         </>
       )}
     </section>
@@ -256,8 +258,8 @@ function Onboarding({ profile, onCreate }) {
 
 function NowPage({ profile, onOpen, onCreate }) {
   const now = usePeriodic(fetchNow);
-  if (now.error) return <div className="card error-card">加载失败：{now.error}</div>;
-  if (!now.data) return <div className="card loading-card">加载中…</div>;
+  if (now.error) return <div className="card error-card">{t('加载失败：')}{now.error}</div>;
+  if (!now.data) return <div className="card loading-card">{t('加载中…')}</div>;
 
   const { activeTask, activeModules, nextTask, ranked, offSlotGoals, recommendation, sleeping, sleep, today, todaySlots, moduleStatus, todayStats, scoreRules, goalCount } = now.data;
 
@@ -275,20 +277,20 @@ function NowPage({ profile, onOpen, onCreate }) {
       {!sleeping ? (
         <section className="card">
           <h2 className="sec-title">
-            今天还要做
-            <span className="dim-stats">{todayStats.total - todayStats.done} 件未完成</span>
+            {t('今天还要做')}
+            <span className="dim-stats">{t('{n} 件未完成', { n: todayStats.total - todayStats.done })}</span>
           </h2>
           {ranked.length ? (
             <ol className="rec-list">
               {ranked.map((it, i) => <NowRow key={`${it.source}-${it.id}`} item={it} index={i + 1} onOpen={onOpen} singleModule={profile?.singleModule} />)}
             </ol>
           ) : (
-            <p className="module-empty-hint">今天没有要推进的目标。到「目标链」加一条就行。</p>
+            <p className="module-empty-hint">{t('今天没有要推进的目标。到「目标链」加一条就行。')}</p>
           )}
 
           {offSlotGoals?.length ? (
             <details className="offslot">
-              <summary>今日其他时段/模块的目标（{offSlotGoals.length}）</summary>
+              <summary>{t('今日其他时段/模块的目标（{n}）', { n: offSlotGoals.length })}</summary>
               <ol className="rec-list">
                 {offSlotGoals.map((it) => <NowRow key={it.id} item={it} index="·" onOpen={onOpen} singleModule={profile?.singleModule} />)}
               </ol>
@@ -300,7 +302,7 @@ function NowPage({ profile, onOpen, onCreate }) {
 
       {todaySlots?.length ? (
         <details className="card">
-          <summary>今天的时段安排（{today.dayTypeLabel}）</summary>
+          <summary>{t('今天的时段安排（{n}）', { n: label(today.dayTypeLabel) })}</summary>
           <ul className="slot-list">
             {todaySlots.map((s) => (
               <li key={`${s.time}-${s.name}`} className={`slot-row${s.sleep ? ' slot-row-sleep' : ''}`}>
@@ -407,56 +409,56 @@ function GoalForm({ profile, now, initial, defaultDimension, onClose, onSaved })
     <div className="modal-mask" onClick={onClose}>
       <form className="goal-form" onClick={(e) => e.stopPropagation()} onSubmit={submit}>
         <div className="drawer-head">
-          <h3>{isEdit ? '编辑目标' : '新建目标'}</h3>
-          <button type="button" className="drawer-close" onClick={onClose} aria-label="关闭">×</button>
+          <h3>{isEdit ? t('编辑目标') : t('新建目标')}</h3>
+          <button type="button" className="drawer-close" onClick={onClose} aria-label={t('关闭')}>×</button>
         </div>
 
         {errs.length ? (
           <div className="form-errors">
-            <b>没写进去，{errs.length} 条规则不通过：</b>
+            <b>{t('没写进去，{n} 条规则不通过：', { n: errs.length })}</b>
             <ul>{errs.map((x, i) => <li key={i}>{x}</li>)}</ul>
           </div>
         ) : null}
         {warns.length ? (
           <div className="form-warns">
-            <b>已保存，但建议补一下：</b>
+            <b>{t('已保存，但建议补一下：')}</b>
             <ul>{warns.map((x, i) => <li key={i}>{typeof x === 'string' ? x : JSON.stringify(x)}</li>)}</ul>
           </div>
         ) : null}
 
         <label className="field field-lead">
-          <span>要做成什么{prefix ? <button type="button" className="prefix-btn" onClick={() => {
+          <span>{t('要做成什么')}{prefix ? <button type="button" className="prefix-btn" onClick={() => {
             if (!name.startsWith(prefix)) setName(prefix + name);
-          }}>插入「{prefix}」</button> : null}</span>
-          <input value={name} onChange={(e) => setName(e.target.value)} placeholder={prefix ? `例：${prefix}把报价单发给客户并确认` : '例：三年内把团队做到 10 人'} required />
+          }}>{t('插入「{prefix}」', { prefix })}</button> : null}</span>
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder={prefix ? t('例：{prefix}把报价单发给客户并确认', { prefix }) : t('例：三年内把团队做到 10 人')} required />
         </label>
 
         <div className="field-row">
           <label className="field">
-            <span>时间范围</span>
+            <span>{t('时间范围')}</span>
             <select value={dimension} onChange={(e) => { setDimension(e.target.value); setParentId(''); }}>
               {dims.map((d) => <option key={d}>{d}</option>)}
             </select>
           </label>
           <label className="field">
-            <span>优先级</span>
+            <span>{t('优先级')}</span>
             <select value={priority} onChange={(e) => setPriority(e.target.value)}>
               {profile.priorities.map((p) => <option key={p}>{p}</option>)}
             </select>
           </label>
           {onlyModule ? null : (
             <label className="field">
-              <span>类别</span>
+              <span>{t('类别')}</span>
               <select value={module} onChange={(e) => { setModule(e.target.value); setSubLine(''); }}>
-                {profile.modules.map((m) => <option key={m.name}>{m.name}</option>)}
+                {profile.modules.map((m) => <option key={m.name} value={m.name}>{label(m.name)}</option>)}
               </select>
             </label>
           )}
           {subLines.length ? (
             <label className="field">
-              <span>子类</span>
+              <span>{t('子类')}</span>
               <select value={subLine} onChange={(e) => setSubLine(e.target.value)} required>
-                <option value="">请选择</option>
+                <option value="">{t('请选择')}</option>
                 {subLines.map((v) => <option key={v}>{v}</option>)}
               </select>
             </label>
@@ -465,7 +467,7 @@ function GoalForm({ profile, now, initial, defaultDimension, onClose, onSaved })
 
         {isEdit ? (
           <label className="field">
-            <span>状态</span>
+            <span>{t('状态')}</span>
             <select value={status} onChange={(e) => setStatus(e.target.value)}>
               {profile.statuses.map((x) => <option key={x}>{x}</option>)}
             </select>
@@ -473,27 +475,27 @@ function GoalForm({ profile, now, initial, defaultDimension, onClose, onSaved })
         ) : null}
 
         <details className="form-more">
-          <summary>更多（可选）</summary>
+          <summary>{t('更多（可选）')}</summary>
           <label className="field">
-            <span>挂到哪个上级目标</span>
+            <span>{t('挂到哪个上级目标')}</span>
             <select value={parentId} onChange={(e) => setParentId(e.target.value)} disabled={!parentDim}>
-              <option value="">{parentDim ? `不挂（上面没有${parentDim}）` : '已经是最上层'}</option>
+              <option value="">{parentDim ? t('不挂（上面没有{parent}）', { parent: label(parentDim) }) : t('已经是最上层')}</option>
               {parents.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
             </select>
           </label>
           <label className="field">
-            <span>怎么算做成了</span>
-            <textarea rows={2} value={kpi} onChange={(e) => setKpi(e.target.value)} placeholder="例：客户确认收到，款到账" />
+            <span>{t('怎么算做成了')}</span>
+            <textarea rows={2} value={kpi} onChange={(e) => setKpi(e.target.value)} placeholder={t('例：客户确认收到，款到账')} />
           </label>
           <label className="field">
-            <span>打算怎么做</span>
-            <textarea rows={3} value={plan} onChange={(e) => setPlan(e.target.value)} placeholder="例：先切 2 个高价客户，每周复盘一次" />
+            <span>{t('打算怎么做')}</span>
+            <textarea rows={3} value={plan} onChange={(e) => setPlan(e.target.value)} placeholder={t('例：先切 2 个高价客户，每周复盘一次')} />
           </label>
         </details>
 
         <div className="form-actions">
-          <button type="button" className="btn-ghost" onClick={onClose}>取消</button>
-          <button type="submit" className="btn-primary" disabled={busy}>{busy ? '保存中…' : (isEdit ? '保存' : '创建')}</button>
+          <button type="button" className="btn-ghost" onClick={onClose}>{t('取消')}</button>
+          <button type="submit" className="btn-primary" disabled={busy}>{busy ? t('保存中…') : (isEdit ? t('保存') : t('创建'))}</button>
         </div>
       </form>
     </div>
@@ -529,8 +531,8 @@ function PlanPage({ profile, onOpen, newSignal = 0 }) {
   const [query, setQuery] = useState('');
   const { data, error } = usePeriodic(() => Promise.all([fetchGoals(), fetchNow()]).then(([g, n]) => ({ goals: g.goals, now: n })), 60_000);
 
-  if (error) return <div className="card error-card">加载失败：{error}</div>;
-  if (!data) return <div className="card loading-card">加载中…</div>;
+  if (error) return <div className="card error-card">{t('加载失败：')}{error}</div>;
+  if (!data) return <div className="card loading-card">{t('加载中…')}</div>;
 
   const { goals, now } = data;
   const current = new Set(now.currentGoalIds ?? []);
@@ -551,52 +553,52 @@ function PlanPage({ profile, onOpen, newSignal = 0 }) {
     <>
       <section className="card">
         <h2 className="sec-title">
-          目标链全景
-          <button className="btn-primary" onClick={() => setCreating(true)}>+ 新建目标</button>
+          {t('目标链全景')}
+          <button className="btn-primary" onClick={() => setCreating(true)}>{t('+ 新建目标')}</button>
         </h2>
         {goals.length === 0 ? (
-          <p className="plan-intro-text">还没有目标。建第一条，它才有东西可看。</p>
+          <p className="plan-intro-text">{t('还没有目标。建第一条，它才有东西可看。')}</p>
         ) : (
           <p className="plan-intro-text">
-            共 {goals.length} 条目标，当前周期 {current.size} 条。
+            {t('共 {n} 条目标，当前周期 {m} 条。', { n: goals.length, m: current.size })}
           </p>
         )}
         <div className="plan-period">
-          <span className="pill pill-light">今天 {now.today.dateLabel}</span>
-          <span className="pill pill-light">本周 {now.today.weekLabel}</span>
-          <span className="pill pill-light">{now.today.monthLabel}</span>
+          <span className="pill pill-light">{t('今天 {date}', { date: now.today.dateLabel })}</span>
+          <span className="pill pill-light">{t('本周 {week}', { week: now.today.weekLabel })}</span>
+          <span className="pill pill-light">{monthName(now.today.monthLabel)}</span>
         </div>
       </section>
 
       {goals.length === 0 ? (
         <section className="card onboard">
-          <p className="onboard-eyebrow">第一步</p>
-          <h2 className="onboard-title">先建一个目标</h2>
-          <p className="onboard-lead">写一句你要做成的事，选个时间范围；建完这里就会有链条和进度。</p>
+          <p className="onboard-eyebrow">{t('第一步')}</p>
+          <h2 className="onboard-title">{t('先建一个目标')}</h2>
+          <p className="onboard-lead">{t('写一句你要做成的事，选个时间范围；建完这里就会有链条和进度。')}</p>
           <div className="onboard-cta">
-            <button className="btn-primary" onClick={() => setCreating(true)}>建第一个目标</button>
+            <button className="btn-primary" onClick={() => setCreating(true)}>{t('建第一个目标')}</button>
           </div>
         </section>
       ) : null}
 
       {goals.length > 0 ? (
       <section className="card filter-bar">
-        <select aria-label="时间范围" value={scope} onChange={(e) => setScope(e.target.value)}>
-          <option value="all">全部时间</option>
-          <option value="current">当前周期</option>
-          <option value="history">历史周期</option>
+        <select aria-label={t('时间范围')} value={scope} onChange={(e) => setScope(e.target.value)}>
+          <option value="all">{t('全部时间')}</option>
+          <option value="current">{t('当前周期')}</option>
+          <option value="history">{t('历史周期')}</option>
         </select>
         {profile.singleModule ? null : (
-          <select aria-label="模块" value={module} onChange={(e) => setModule(e.target.value)}>
-            <option value="">全部模块</option>
+          <select aria-label={t('类别')} value={module} onChange={(e) => setModule(e.target.value)}>
+            <option value="">{t('全部模块')}</option>
             {profile.modules.map((m) => <option key={m.name}>{m.name}</option>)}
           </select>
         )}
-        <select aria-label="状态" value={status} onChange={(e) => setStatus(e.target.value)}>
-          <option value="">全部状态</option>
-          {profile.statuses.map((s) => <option key={s}>{s}</option>)}
+        <select aria-label={t('状态')} value={status} onChange={(e) => setStatus(e.target.value)}>
+          <option value="">{t('全部状态')}</option>
+          {profile.statuses.map((s) => <option key={s} value={s}>{label(s)}</option>)}
         </select>
-        <input aria-label="搜索目标" placeholder="搜索目标 / 计划 / KPI…" value={query} onChange={(e) => setQuery(e.target.value)} />
+        <input aria-label={t('搜索目标')} placeholder={t('搜索目标 / 计划 / KPI…')} value={query} onChange={(e) => setQuery(e.target.value)} />
       </section>
 
       ) : null}
@@ -607,8 +609,8 @@ function PlanPage({ profile, onOpen, newSignal = 0 }) {
         return (
           <section key={dim} className="card">
             <h2 className="sec-title">
-              {dim}
-              <span className="dim-stats">{list.length} 条 · {done} 已完成</span>
+              {label(dim)}
+              <span className="dim-stats">{t('{n} 条 · {m} 已完成', { n: list.length, m: done })}</span>
             </h2>
             <ul className="plan-goal-list">
               {list.map((g) => <GoalRow key={g.id} g={g} profile={profile} onOpen={onOpen} />)}
@@ -619,20 +621,20 @@ function PlanPage({ profile, onOpen, newSignal = 0 }) {
 
       {rest.length ? (
         <section className="card">
-          <h2 className="sec-title">其他维度</h2>
+          <h2 className="sec-title">{t('其他维度')}</h2>
           <ul className="plan-goal-list">
             {rest.map((g) => <GoalRow key={g.id} g={g} profile={profile} onOpen={onOpen} />)}
           </ul>
         </section>
       ) : null}
 
-      {goals.length > 0 && !filtered.length ? <div className="card module-empty-hint">没有匹配的目标。点上方「+ 新建目标」建第一条，或调整筛选条件。</div> : null}
+      {goals.length > 0 && !filtered.length ? <div className="card module-empty-hint">{t('没有匹配的目标。点上方「+ 新建目标」建第一条，或调整筛选条件。')}</div> : null}
 
       {profile.moduleChoice === 'default' ? (
         <details className="card">
-          <summary>设置</summary>
+          <summary>{t('设置')}</summary>
           <div className="blocks-row">
-            <span>按时间段安排：<b>{profile.timeBlocks ? '开启' : '关闭'}</b></span>
+            <span>{t('按时间段安排：{state}', { state: profile.timeBlocks ? t('开启') : t('关闭') })}</span>
             <button
               type="button"
               className="link-btn"
@@ -640,7 +642,7 @@ function PlanPage({ profile, onOpen, newSignal = 0 }) {
                 try { await saveSettings(!profile.timeBlocks); } catch { /* 失败就不改，页面保持原样 */ }
                 window.dispatchEvent(new Event('pdca:profile-changed'));
               }}
-            >改成{profile.timeBlocks ? '不分块' : '按时间段'}</button>
+            >{t('改成{next}', { next: profile.timeBlocks ? t('不分块') : t('按时间段') })}</button>
           </div>
         </details>
       ) : null}
@@ -669,23 +671,23 @@ function Donut({ done, total, label }) {
 
 function CheckPage({ profile }) {
   const { data, error } = usePeriodic(fetchCheck);
-  if (error) return <div className="card error-card">加载失败：{error}</div>;
-  if (!data) return <div className="card loading-card">加载中…</div>;
+  if (error) return <div className="card error-card">{t('加载失败：')}{error}</div>;
+  if (!data) return <div className="card loading-card">{t('加载中…')}</div>;
 
   const { today, todayStats, weekLabel, weekStats, moduleRates, deviations, reviewTimeline } = data;
 
   return (
     <>
       <section className="card">
-        <h2 className="sec-title">完成情况 · {today.dateLabel}</h2>
+        <h2 className="sec-title">{t('完成情况 · {date}', { date: today.dateLabel })}</h2>
         <div className="donut-row">
-          <Donut done={todayStats.done} total={todayStats.total} label="今日目标" />
-          <Donut done={weekStats.done} total={weekStats.total} label={`本周 · ${weekLabel}`} />
+          <Donut done={todayStats.done} total={todayStats.total} label={t('今日目标')} />
+          <Donut done={weekStats.done} total={weekStats.total} label={t('本周 · {week}', { week: weekLabel })} />
         </div>
       </section>
 
       <section className={`card ${deviations.length ? 'deviation-card' : 'deviation-ok-card'}`}>
-        <h2 className="sec-title">{deviations.length ? `偏差提示 · ${deviations.length}` : '无偏差'}</h2>
+        <h2 className="sec-title">{deviations.length ? t('偏差提示 · {n}', { n: deviations.length }) : t('无偏差')}</h2>
         {deviations.length ? (
           <ul className="deviation-list">
             {deviations.map((d, i) => (
@@ -696,25 +698,25 @@ function CheckPage({ profile }) {
             ))}
           </ul>
         ) : (
-          <div className="module-empty-hint">目标齐全、主线数量合规、子业务线分离正常</div>
+          <div className="module-empty-hint">{t('目标齐全、主线数量合规、子业务线分离正常')}</div>
         )}
       </section>
 
       {profile.singleModule ? null : (
       <section className="card">
-        <h2 className="sec-title">模块完成率（今日）</h2>
+        <h2 className="sec-title">{t('模块完成率（今日）')}</h2>
         <div className="rate-list">
           {moduleRates.map((m) => {
             const pct = m.total > 0 ? Math.round((m.done / m.total) * 100) : 0;
             const note = m.total === 0
-              ? (m.cadence === 'weekly' ? '周更 · 按周验收'
-                : m.cadence === 'none' ? '不设目标'
-                  : m.scheduledToday === false ? '今日无排班' : '未建')
+              ? (m.cadence === 'weekly' ? t('周更 · 按周验收')
+                : m.cadence === 'none' ? t('不设目标')
+                  : m.scheduledToday === false ? t('今日无排班') : t('未建'))
               : '';
             return (
               <div key={m.module} className="rate-row">
                 <div className="rate-head">
-                  <span className="rate-name">{m.module}</span>
+                  <span className="rate-name">{label(m.module)}</span>
                   <span className="rate-num">{m.done}/{m.total}{note ? ` · ${note}` : ''}</span>
                 </div>
                 <div className="rate-bar">
@@ -728,7 +730,7 @@ function CheckPage({ profile }) {
       )}
 
       <section className="card">
-        <h2 className="sec-title">复盘时间线</h2>
+        <h2 className="sec-title">{t('复盘时间线')}</h2>
         {reviewTimeline?.length ? (
           <ul className="timeline">
             {reviewTimeline.map((r) => (
@@ -748,7 +750,7 @@ function CheckPage({ profile }) {
             ))}
           </ul>
         ) : (
-          <div className="module-empty-hint">还没有复盘记录。完成 Check 流程后，check/act 笔记会出现在这里。</div>
+          <div className="module-empty-hint">{t('还没有复盘记录。完成 Check 流程后，check/act 笔记会出现在这里。')}</div>
         )}
       </section>
     </>
@@ -784,7 +786,7 @@ function DetailDrawer({ id, profile, onClose }) {
   };
 
   const remove = async () => {
-    if (!window.confirm('删除这条目标？会标记为「已放弃」并保留历史记录（有下级目标时会被拒绝）。')) return;
+    if (!window.confirm(t('删除这条目标？会标记为「已放弃」并保留历史记录（有下级目标时会被拒绝）。'))) return;
     setBusy(true); setNote(null);
     try {
       await deleteGoal(id);
@@ -800,20 +802,20 @@ function DetailDrawer({ id, profile, onClose }) {
     <div className="drawer-mask" onClick={onClose}>
       <aside className="drawer" onClick={(e) => e.stopPropagation()}>
         <div className="drawer-head">
-          <h3>目标详情</h3>
-          <button className="drawer-close" onClick={onClose} aria-label="关闭">×</button>
+          <h3>{t('目标详情')}</h3>
+          <button className="drawer-close" onClick={onClose} aria-label={t('关闭')}>×</button>
         </div>
-        {error ? <p className="module-empty-hint">加载失败：{error}</p> : null}
-        {!data && !error ? <p className="module-empty-hint">加载中…</p> : null}
+        {error ? <p className="module-empty-hint">{t('加载失败：')}{error}</p> : null}
+        {!data && !error ? <p className="module-empty-hint">{t('加载中…')}</p> : null}
         {data ? (
           <>
             {data.chain?.length ? (
               <section className="drawer-sec">
-                <h4>目标链</h4>
+                <h4>{t('目标链（详情）')}</h4>
                 <ul className="chain-list">
                   {data.chain.map((c, i) => (
                     <li key={c.id} className={c.id === data.goal.id ? 'chain-cur' : ''} style={{ marginLeft: i * 12 }}>
-                      <span className="chain-dim">{c.dimension}</span>
+                      <span className="chain-dim">{label(c.dimension)}</span>
                       <span className="chain-name">{c.name}</span>
                       {c.id !== data.goal.id ? <StatusChip s={c.status} /> : null}
                     </li>
@@ -827,7 +829,7 @@ function DetailDrawer({ id, profile, onClose }) {
               <div className="drawer-meta">
                 <PrioChip p={data.goal.priority} />
                 <StatusChip s={data.goal.status} />
-                {data.goal.dimension ? <span className="chip">{data.goal.dimension}</span> : null}
+                {data.goal.dimension ? <span className="chip">{label(data.goal.dimension)}</span> : null}
                 {data.goal.module ? <span className="chip module-chip">{data.goal.module}</span> : null}
               </div>
               {[['Plan', data.goal.plan], ['KPI', data.goal.kpi], ['Do', data.goal.do_note], ['Check', data.goal.check_note], ['Act', data.goal.act_note]].map(([k, v]) => (
@@ -837,7 +839,7 @@ function DetailDrawer({ id, profile, onClose }) {
 
             {!editing ? (
               <section className="drawer-sec drawer-actions">
-                <h4>调整</h4>
+                <h4>{t('调整')}</h4>
                 <div className="status-row">
                   {profile.statuses.filter((x) => x !== data.goal.status).map((st) => (
                     <button key={st} className="btn-ghost" disabled={busy} onClick={() => setStatus(st)}>{st}</button>
@@ -845,15 +847,15 @@ function DetailDrawer({ id, profile, onClose }) {
                 </div>
                 {note ? <p className="form-errors-inline">{note}</p> : null}
                 <div className="form-actions">
-                  <button className="btn-ghost" onClick={remove} disabled={busy}>删除</button>
-                  <button className="btn-primary" onClick={() => setEditing(true)} disabled={busy}>编辑</button>
+                  <button className="btn-ghost" onClick={remove} disabled={busy}>{t('删除')}</button>
+                  <button className="btn-primary" onClick={() => setEditing(true)} disabled={busy}>{t('编辑')}</button>
                 </div>
               </section>
             ) : null}
 
             {data.children?.length ? (
               <section className="drawer-sec">
-                <h4>下级目标（{data.children.length}）</h4>
+                <h4>{t('下级目标（{n}）', { n: data.children.length })}</h4>
                 <ul className="child-list">
                   {data.children.map((c) => (
                     <li key={c.id}>
@@ -868,7 +870,7 @@ function DetailDrawer({ id, profile, onClose }) {
 
             {data.goal.change_log ? (
               <section className="drawer-sec">
-                <h4>变更记录</h4>
+                <h4>{t('变更记录')}</h4>
                 <ul className="changelog">
                   {String(data.goal.change_log).split(/\\n|\n/).filter(Boolean).map((line, i) => <li key={i}>{line}</li>)}
                 </ul>
@@ -876,7 +878,7 @@ function DetailDrawer({ id, profile, onClose }) {
             ) : null}
           </>
         ) : null}
-        <p className="drawer-tip">表单与 Agent 共用同一套后端校验；表单被拦时会写清是哪条规则。</p>
+        <p className="drawer-tip">{t('表单与 Agent 共用同一套后端校验；表单被拦时会写清是哪条规则。')}</p>
       </aside>
       {editing && data ? (
         <GoalForm
@@ -894,6 +896,7 @@ function DetailDrawer({ id, profile, onClose }) {
 // ---------- 根组件 ----------
 
 export default function App() {
+  useLang();
   const [profile, setProfile] = useState(null);
   const [profileError, setProfileError] = useState(null);
   // 初始页读 hash（#plan / #check），切页时写回——便于分享定位与截图验收
@@ -925,7 +928,7 @@ export default function App() {
     const tick = () => {
       const d = new Date();
       const hm = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-      setClock(`${WEEKDAYS[d.getDay()]} ${hm}`);
+      setClock(`${weekdayName(d.getDay())} ${hm}`);
     };
     tick();
     const t = setInterval(tick, 30_000);
@@ -939,8 +942,8 @@ export default function App() {
     return { ...profile, __map: map, __modules: profile.modules };
   }, [profile]);
 
-  if (profileError) return <div className="wrap"><div className="card error-card">配置加载失败：{profileError}</div></div>;
-  if (!ctx) return <div className="wrap"><div className="card loading-card">加载中…</div></div>;
+  if (profileError) return <div className="wrap"><div className="card error-card">{t('配置加载失败：')}{profileError}</div></div>;
+  if (!ctx) return <div className="wrap"><div className="card loading-card">{t('加载中…')}</div></div>;
 
   const open = (item) => setDetailId(item?.id ?? null);
 
@@ -951,7 +954,7 @@ export default function App() {
       {page === 'plan' ? <PlanPage profile={ctx} onOpen={open} newSignal={newSignal} /> : null}
       {page === 'check' ? <CheckPage profile={ctx} /> : null}
       {detailId ? <DetailDrawer id={detailId} profile={ctx} onClose={() => setDetailId(null)} /> : null}
-      <footer className="foot">{ctx.brand?.appName ?? 'PDCA Core'} · 目标链 + 当下引擎</footer>
+      <footer className="foot">{ctx.brand?.appName ?? 'PDCA Core'} · {t('目标链 + 当下引擎')}</footer>
     </div>
   );
 }

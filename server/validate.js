@@ -3,6 +3,7 @@
 import { parseDayGoal, parseWeekGoal, parseMonthGoal } from './now.js';
 import { MODULES, SUBLINES_OF, SLOT_MODULES, baseModule } from './modules.js';
 import { DIMENSIONS, STATUSES, PRIORITIES, RULES, ancestorDims, PARENT_DIM } from './profile.js';
+import { tr } from './i18n.js';
 
 // 世界观全部来自 profile：维度 / 状态 / 优先级 / 主线上限 / 是否强制子业务线分离
 export { MODULES, DIMENSIONS, STATUSES, PRIORITIES, RULES };
@@ -71,13 +72,13 @@ export function subModuleOf(goal) {
 }
 
 /** 子业务线校验：返回错误文案或 null（规则强度由 profile.rules.subLineSplit 控制） */
-function subLineError(module, name, mods = null) {
+function subLineError(module, name, mods = null, lang = 'zh') {
   const subs = mods
     ? (mods.find((m) => m.name === baseModule(module))?.subLines ?? [])
     : (SUBLINES_OF[baseModule(module)] ?? []);
   if (!RULES.subLineSplit || !subs.length) return null;
   if (subs.some((s) => String(name ?? '').includes(s))) return null;
-  return `${module} 必须区分子业务线：目标名称需包含「${subs.join('」或「')}」，禁止合并为笼统目标`;
+  return tr(lang, `${module} 必须区分子业务线：目标名称需包含「${subs.join('」或「')}」，禁止合并为笼统目标`, `${module} requires a sub-line: include “${subs.join('” or “')}” in the goal name`);
 }
 
 
@@ -105,28 +106,29 @@ function expectedPrioritySet(n) {
  * 创建目标校验。返回 { ok, status, errors, warnings }
  * errors → 拦截（HTTP 400/409）；warnings → 放行但提示
  */
-export function validateCreate(db, g, mods = null) {
+export function validateCreate(db, g, mods = null, lang = 'zh') {
+  const trr = (zh, en) => tr(lang, zh, en);
   const errors = [];
   const warnings = [];
 
-  if (!g.name || !String(g.name).trim()) errors.push('目标名称必填');
-  if (!DIMENSIONS.includes(g.dimension)) errors.push(`时间维度必须是 ${DIMENSIONS.join('/')}`);
+  if (!g.name || !String(g.name).trim()) errors.push(trr('目标名称必填', 'Goal name is required'));
+  if (!DIMENSIONS.includes(g.dimension)) errors.push(trr(`时间维度必须是 ${DIMENSIONS.join('/')}`, `Time horizon must be one of ${DIMENSIONS.join('/')}`));
   if (RULES.requirePriority) {
-    if (!g.priority) errors.push(`优先级必填（无优先级→拦截）：${PRIORITIES.join('/')}`);
-    else if (!PRIORITIES.includes(g.priority)) errors.push(`优先级只能是 ${PRIORITIES.join('/')}`);
+    if (!g.priority) errors.push(trr(`优先级必填（无优先级→拦截）：${PRIORITIES.join('/')}`, `Priority is required: ${PRIORITIES.join('/')}`));
+    else if (!PRIORITIES.includes(g.priority)) errors.push(trr(`优先级只能是 ${PRIORITIES.join('/')}`, `Priority must be one of ${PRIORITIES.join('/')}`));
   } else if (g.priority && !PRIORITIES.includes(g.priority)) {
-    errors.push(`优先级只能是 ${PRIORITIES.join('/')}`);
+    errors.push(trr(`优先级只能是 ${PRIORITIES.join('/')}`, `Priority must be one of ${PRIORITIES.join('/')}`));
   }
   // 模块值域 = 模块基名 ∪ 时段模块（带子业务线的写法，如「工作 开发」）
   const allowed = mods
     ? new Set(mods.flatMap((m) => [m.name, ...(m.subLines ?? []).map((s) => `${m.name} ${s}`)]))
     : new Set([...MODULES, ...SLOT_MODULES]);
-  if (!allowed.has(g.module)) errors.push(`模块必须是 ${[...allowed].join('/')}`);
+  if (!allowed.has(g.module)) errors.push(trr(`模块必须是 ${[...allowed].join('/')}`, `Category must be one of ${[...allowed].join('/')}`));
 
   if (errors.length) return { ok: false, status: 400, errors, warnings };
 
   // 规则9：子业务线强制分离（按 profile 的 subLines 通用化）
-  const subErr = subLineError(g.module, g.name, mods);
+  const subErr = subLineError(g.module, g.name, mods, lang);
   if (subErr) errors.push(subErr);
 
   // 规则1：目标链完整性——父目标必须存在且为上级维度（支持分号多上级，逐个校验）
@@ -134,15 +136,15 @@ export function validateCreate(db, g, mods = null) {
     for (const pid of splitParentIds(g.parent_id)) {
       const parent = db.prepare('SELECT * FROM goals WHERE id = ?').get(pid);
       if (!parent) {
-        errors.push(`上级目标不存在（${pid}）：目标链不允许断裂，请先建立上级目标`);
+        errors.push(trr(`上级目标不存在（${pid}）：目标链不允许断裂，请先建立上级目标`, `Parent goal not found (${pid}). The goal chain cannot break; create the parent first`));
       } else if (!ancestorDims(g.dimension).includes(parent.dimension)) {
         errors.push(
-          `上级目标维度必须是上层周期：${g.dimension} 的父目标不能是「${parent.dimension}」（规则：目标链逐级建立）`
+          trr(`上级目标维度必须是上层周期：${g.dimension} 的父目标不能是「${parent.dimension}」（规则：目标链逐级建立）`, `Parent must be one level up: a ${g.dimension} goal cannot sit under a ${parent.dimension} goal`)
         );
       }
     }
   } else if (g.dimension !== '三年计划') {
-    warnings.push(`未关联上级目标：${g.dimension} 建议关联 Parent Goal，保持目标链完整`);
+    warnings.push(trr(`未关联上级目标：${g.dimension} 建议关联 Parent Goal，保持目标链完整`, `No parent linked: a ${g.dimension} goal should link to its parent to keep the chain complete`));
   }
 
   // 规则3/5：主线数量（同模块+同子模块+同维度+同周期，进行中）
@@ -152,8 +154,8 @@ export function validateCreate(db, g, mods = null) {
     .filter((s) => sameMainlineGroup(s, g));
   if (siblings.length >= RULES.mainlineLimit) {
     errors.push(
-      `超${RULES.mainlineLimit}条主线：${groupLabel(g)} 已有 ${siblings.length} 条进行中目标（规则：最多${RULES.mainlineLimit}条，超出请顺延，保留 ${PRIORITIES.join('/')} Top${RULES.mainlineLimit}）`,
-      `现有主线：${siblings.map((s) => `${s.priority ?? '?'} ${s.name}`).join('；')}`
+      trr(`超${RULES.mainlineLimit}条主线：${groupLabel(g)} 已有 ${siblings.length} 条进行中目标（规则：最多${RULES.mainlineLimit}条，超出请顺延，保留 ${PRIORITIES.join('/')} Top${RULES.mainlineLimit}）`, `Too many active goals: ${groupLabel(g)} already has ${siblings.length} (limit ${RULES.mainlineLimit}). Move a lower-priority goal forward and keep the ${PRIORITIES.join('/')} top ${RULES.mainlineLimit}`),
+      trr(`现有主线：${siblings.map((s) => `${s.priority ?? '?'} ${s.name}`).join('；')}`, `Current goals: ${siblings.map((s) => `${s.priority ?? '?'} ${s.name}`).join('; ')}`)
     );
   }
 
@@ -162,7 +164,7 @@ export function validateCreate(db, g, mods = null) {
   const expected = expectedPrioritySet(siblings.length + 1);
   if (!expected.every((p) => prioSet.includes(p)) || prioSet.some((p) => !expected.includes(p))) {
     warnings.push(
-      `优先级映射建议：${siblings.length + 1} 条主线应为 ${expected.join('+')}，当前组内为 ${prioSet.join('+')}，请从 P0 重排`
+      trr(`优先级映射建议：${siblings.length + 1} 条主线应为 ${expected.join('+')}，当前组内为 ${prioSet.join('+')}，请从 P0 重排`, `Priority mapping: ${siblings.length + 1} active goals should be ${expected.join('+')}; this group is ${prioSet.join('+')}. Re-rank from P0`)
     );
   }
 
@@ -172,38 +174,39 @@ export function validateCreate(db, g, mods = null) {
 /**
  * 更新目标校验（PATCH）。返回 { ok, status, errors, warnings, changes }
  */
-export function validateUpdate(db, existing, patch, mods = null) {
+export function validateUpdate(db, existing, patch, mods = null, lang = 'zh') {
+  const trr = (zh, en) => tr(lang, zh, en);
   const errors = [];
   const warnings = [];
   const changes = {};
 
   if (patch.status !== undefined && !STATUSES.includes(patch.status)) {
-    errors.push(`状态只能是 ${STATUSES.join('/')}`);
+    errors.push(trr(`状态只能是 ${STATUSES.join('/')}`, `Status must be one of ${STATUSES.join('/')}`));
   }
   if (patch.priority !== undefined && !PRIORITIES.includes(patch.priority)) {
-    errors.push(`优先级只能是 ${PRIORITIES.join('/')}`);
+    errors.push(trr(`优先级只能是 ${PRIORITIES.join('/')}`, `Priority must be one of ${PRIORITIES.join('/')}`));
   }
   if (patch.module !== undefined && mods) {
     const allowed = new Set(mods.flatMap((m) => [m.name, ...(m.subLines ?? []).map((s) => `${m.name} ${s}`)]));
-    if (!allowed.has(patch.module)) errors.push(`模块必须是 ${[...allowed].join('/')}`);
+    if (!allowed.has(patch.module)) errors.push(trr(`模块必须是 ${[...allowed].join('/')}`, `Category must be one of ${[...allowed].join('/')}`));
   }
   if (patch.name !== undefined && !String(patch.name).trim()) {
-    errors.push('目标名称不能为空');
+    errors.push(trr('目标名称不能为空', 'Goal name cannot be empty'));
   }
 
   const next = { ...existing, ...patch };
 
   // 规则9：子业务线名称检查（改名时）
-  const subErr2 = patch.name !== undefined ? subLineError(next.module, next.name, mods) : null;
+  const subErr2 = patch.name !== undefined ? subLineError(next.module, next.name, mods, lang) : null;
   if (subErr2) errors.push(subErr2);
 
   // 规则1：父目标检查（改挂载时，支持分号多上级，逐个校验）
   if (patch.parent_id !== undefined && patch.parent_id) {
     for (const pid of splitParentIds(patch.parent_id)) {
       const parent = db.prepare('SELECT * FROM goals WHERE id = ?').get(pid);
-      if (!parent) errors.push(`上级目标不存在（${pid}）`);
+      if (!parent) errors.push(trr(`上级目标不存在（${pid}）`, `Parent goal not found (${pid})`));
       else if (!ancestorDims(next.dimension).includes(parent.dimension)) {
-        errors.push(`父目标维度不合法：${next.dimension} 的父目标不能是「${parent.dimension}」`);
+        errors.push(trr(`父目标维度不合法：${next.dimension} 的父目标不能是「${parent.dimension}」`, `Invalid parent: a ${next.dimension} goal cannot sit under a ${parent.dimension} goal`));
       }
     }
   }
@@ -218,7 +221,7 @@ export function validateUpdate(db, existing, patch, mods = null) {
     const expected = expectedPrioritySet(siblings.length + 1);
     if (prioSet.some((p) => !expected.includes(p))) {
       warnings.push(
-        `优先级映射建议：组内 ${siblings.length + 1} 条主线应为 ${expected.join('+')}，当前为 ${prioSet.join('+')}，请从 P0 重排`
+        trr(`优先级映射建议：组内 ${siblings.length + 1} 条主线应为 ${expected.join('+')}，当前为 ${prioSet.join('+')}，请从 P0 重排`, `Priority mapping: ${siblings.length + 1} active goals should be ${expected.join('+')}; currently ${prioSet.join('+')}. Re-rank from P0`)
       );
     }
     changes.priority = `${existing.priority ?? '无'} → ${patch.priority}`;

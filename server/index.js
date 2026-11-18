@@ -13,6 +13,7 @@ import { PROFILE, BRAND, DIMENSIONS, PRIORITIES, STATUSES, RULES } from './profi
 import { userModules, setUserModules, SINGLE_MODULE } from './usermodules.js';
 import { buildCheckPayload } from './check.js';
 import { validateCreate, validateUpdate, appendChangeLog, splitParentIds } from './validate.js';
+import { langOf, tr } from './i18n.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const CLIENT_DIST = path.join(__dirname, '..', 'client', 'dist');
@@ -61,6 +62,7 @@ function readSession(req) {
 }
 
 app.addHook('onRequest', async (req, reply) => {
+  const lang = langOf(req);
   if (!AUTH_ON && !TOKEN_ON) return;               // 本地开发：未配置凭据，放行
   const url = String(req.url).split('?')[0];
   if (OPEN_EXACT.has(url) || OPEN_PREFIX.some((p) => url.startsWith(p))) return;
@@ -75,7 +77,7 @@ app.addHook('onRequest', async (req, reply) => {
       if (isApi) {
         return reply.code(401).send({
           error: 'unauthorized',
-          hint: '浏览器请先 POST /api/login 换取会话 Cookie；脚本请带 Authorization: Bearer <token>'
+          hint: tr(lang, '浏览器请先 POST /api/login 换取会话 Cookie；脚本请带 Authorization: Bearer <token>', 'Sign in via POST /api/login for a session cookie, or use Authorization: Bearer <token>' )
         });
       }
       return reply.redirect('/login');
@@ -96,14 +98,14 @@ app.addHook('onRequest', async (req, reply) => {
     if (!s.ok || s.via === 'token') {
       return reply.code(401).send({
         error: 'unauthorized',
-        hint: '页面写入需要先登录（Cookie）；脚本写入请带 Authorization: Bearer <token>'
+        hint: tr(lang, '页面写入需要先登录（Cookie）；脚本写入请带 Authorization: Bearer <token>', 'Page writes need a signed-in Cookie session; scripts need Authorization: Bearer <token>')
       });
     }
     let same = false;
     try {
       same = req.headers.origin ? new URL(req.headers.origin).host === req.headers.host : req.headers['x-pdca-client'] === 'web';
     } catch { same = false; }
-    if (!same) return reply.code(403).send({ error: 'forbidden', hint: '写接口只接受页面内同源请求' });
+    if (!same) return reply.code(403).send({ error: 'forbidden', hint: tr(lang, '写接口只接受页面内同源请求', 'Write endpoints only accept same-origin requests') });
   }
 });
 
@@ -113,17 +115,18 @@ app.addHook('preHandler', async (req) => { if (!req.db) req.db = singleDb; });
 // ---------- 登录 / 登出 ----------
 
 app.post('/api/login', async (req, reply) => {
-  if (!AUTH_ON) return reply.code(503).send({ error: '未配置访问口令（PDCA_PASSCODE 或 server/config/api.json 的 passcode）' });
+  const lang = langOf(req);
+  if (!AUTH_ON) return reply.code(503).send({ error: tr(lang, '未配置访问口令（PDCA_PASSCODE 或 server/config/api.json 的 passcode）', 'Passcode is not configured (set PDCA_PASSCODE or server/config/api.json)') });
   const ip = req.ip ?? 'unknown';
   const wait = loginLimiter.retryAfter(ip);
   if (wait > 0) {
     reply.header('Retry-After', String(wait));
-    return reply.code(429).send({ error: '尝试过于频繁，请稍后再试', retryAfter: wait });
+    return reply.code(429).send({ error: tr(lang, '尝试过于频繁，请稍后再试', 'Too many attempts. Try again later.'), retryAfter: wait });
   }
   const given = String((req.body ?? {}).passcode ?? '');
   if (!given || !safeEqual(given, PASSCODE)) {
     loginLimiter.fail(ip);
-    return reply.code(401).send({ error: '口令错误' });
+    return reply.code(401).send({ error: tr(lang, '口令错误', 'Wrong passcode') });
   }
   loginLimiter.reset(ip);
   reply.header('set-cookie', cookieHeader(req, issueSession(PASSCODE)));
@@ -140,7 +143,7 @@ app.get('/login', async (req, reply) => {
   if (AUTH_ON && readSession(req).ok) return reply.redirect('/');
   reply.type('text/html; charset=utf-8');
   reply.header('Cache-Control', 'no-store');
-  return loginPage();
+  return loginPage({ lang: langOf(req) });
 });
 
 
@@ -180,7 +183,7 @@ app.post('/api/setup', async (req, reply) => {
   const body = req.body ?? {};
   const raw = body.modules;
   if (!Array.isArray(raw)) {
-    return reply.code(400).send({ error: 'modules 必须是数组（[] 表示不划分模块）' });
+    return reply.code(400).send({ error: tr(langOf(req), 'modules 必须是数组（[] 表示不划分模块）', 'modules must be an array ([] means one list)') });
   }
   const names = raw
     .map((m) => (typeof m === 'string' ? m : m?.name))
@@ -188,7 +191,7 @@ app.post('/api/setup', async (req, reply) => {
     .filter(Boolean)
     .slice(0, 8);
   if (names.some((n) => n.length > 12)) {
-    return reply.code(400).send({ error: '模块名最多 12 个字' });
+    return reply.code(400).send({ error: tr(langOf(req), '模块名最多 12 个字', 'Category names are limited to 12 characters') });
   }
   setUserModules(req.db, names);
   if (typeof body.timeBlocks === 'boolean') setMeta(req.db, 'time_blocks', body.timeBlocks ? 'on' : 'off');
@@ -199,16 +202,16 @@ app.post('/api/setup', async (req, reply) => {
 app.post('/api/settings', async (req, reply) => {
   const v = req.body?.timeBlocks;
   if (typeof v !== 'boolean') {
-    return reply.code(400).send({ error: 'timeBlocks 必须是 true / false' });
+    return reply.code(400).send({ error: tr(langOf(req), 'timeBlocks 必须是 true / false', 'timeBlocks must be true or false') });
   }
   setMeta(req.db, 'time_blocks', v ? 'on' : 'off');
   return { ok: true, timeBlocks: v };
 });
 
-app.get('/api/now', async (req) => buildNowPayload(req.db, new Date(), { awake: req.query.awake === 'true' }));
+app.get('/api/now', async (req) => buildNowPayload(req.db, new Date(), { awake: req.query.awake === 'true', lang: langOf(req) }));
 
 // Check 页聚合：完成率 + 偏差检测 + 复盘时间线
-app.get('/api/check', async (req) => buildCheckPayload(req.db));
+app.get('/api/check', async (req) => buildCheckPayload(req.db, new Date(), langOf(req)));
 
 // 下级目标查找：parent_id 可能是分号拼接的多上级，逐条拆分匹配（表小，全量拉取后在 JS 侧过滤）
 function childrenOf(db, id, fields = 'id, name, dimension, priority, status') {
@@ -280,7 +283,7 @@ function inQuarter(name, quarter) {
 // 服务端按周期分组（复用 now.js 周期解析，日期由服务端算），只返回消息所需精简字段
 app.get('/api/goals/chain', async (req, reply) => {
   const { module, q } = req.query;
-  if (!module) return reply.code(400).send({ error: 'module 必填', hint: '如 ?module=工作；带子线的模块加 &q=子线名' });
+  if (!module) return reply.code(400).send({ error: tr(langOf(req), 'module 必填', 'module is required'), hint: tr(langOf(req), '如 ?module=工作；带子线的模块加 &q=子线名', 'e.g. ?module=Work; add &q=sub-line for a category with sub-lines') });
   const p = zonedParts();
   // 候选集只按模块收窄；q 的裁剪交给 scopeByLine（需父链信息，不能在 SQL 里做）
   const candidates = req.db.prepare(
@@ -351,7 +354,7 @@ app.get('/api/goals/:id', async (req, reply) => {
 
 // 本周概览
 app.get('/api/week', async (req) => {
-  const payload = buildNowPayload(req.db);
+  const payload = buildNowPayload(req.db, new Date(), { lang: langOf(req) });
   return {
     weekLabel: payload.today.weekLabel,
     todayStats: payload.todayStats,
@@ -388,8 +391,8 @@ app.post('/api/demo', async (req, reply) => {
   const r = seedDemo(req.db, { force, modules });
   if (!r.ok) {
     return reply.code(409).send({
-      error: '已经导入过演示数据',
-      hint: '想重新生成请带 ?force=true（会覆盖 demo-* 这 7 条，你新建的目标不受影响）',
+      error: tr(langOf(req), '已经导入过演示数据', 'Demo data already imported'),
+      hint: tr(langOf(req), '想重新生成请带 ?force=true（会覆盖 demo-* 这 7 条，你新建的目标不受影响）', 'Use ?force=true to regenerate the 7 demo goals; your own goals are untouched'),
       existing: r.existing
     });
   }
@@ -403,9 +406,10 @@ app.post('/api/goals', async (req, reply) => {
   for (const k of CREATE_FIELDS) if (body[k] !== undefined) g[k] = body[k];
   if (g.status === undefined) g.status = '进行中';
 
-  const v = validateCreate(req.db, g, userModules(req.db).modules);
+  const lang = langOf(req);
+  const v = validateCreate(req.db, g, userModules(req.db).modules, lang);
   if (!v.ok) {
-    return reply.code(v.status).send({ error: '写入被规则拦截', errors: v.errors, warnings: v.warnings });
+    return reply.code(v.status).send({ error: tr(lang, '写入被规则拦截', 'Write blocked by validation'), errors: v.errors, warnings: v.warnings });
   }
 
   const now = new Date().toISOString();
@@ -414,7 +418,7 @@ app.post('/api/goals', async (req, reply) => {
     name: g.name, module: g.module, dimension: g.dimension, priority: g.priority,
     status: g.status, parent_id: g.parent_id ?? null, plan: g.plan ?? null, kpi: g.kpi ?? null,
     do_note: g.do_note ?? null, check_note: g.check_note ?? null, act_note: g.act_note ?? null,
-    est_effort: g.est_effort ?? null, change_log: `[${now.slice(0, 10)}] 创建目标`,
+    est_effort: g.est_effort ?? null, change_log: tr(lang, `[${now.slice(0, 10)}] 创建目标`, `[${now.slice(0, 10)}] Goal created`),
     created_at: now, updated_at: now
   };
   req.db.prepare(`
@@ -435,12 +439,13 @@ app.patch('/api/goals/:id', async (req, reply) => {
   const patch = {};
   for (const k of PATCH_FIELDS) if (body[k] !== undefined) patch[k] = body[k];
   if (!Object.keys(patch).length && typeof body.note !== 'string') {
-    return reply.code(400).send({ error: '没有可更新的字段' });
+    return reply.code(400).send({ error: tr(langOf(req), '没有可更新的字段', 'No fields to update') });
   }
 
-  const v = validateUpdate(req.db, existing, patch, userModules(req.db).modules);
+  const lang = langOf(req);
+  const v = validateUpdate(req.db, existing, patch, userModules(req.db).modules, lang);
   if (!v.ok) {
-    return reply.code(v.status).send({ error: '更新被规则拦截', errors: v.errors, warnings: v.warnings });
+    return reply.code(v.status).send({ error: tr(lang, '更新被规则拦截', 'Update blocked by validation'), errors: v.errors, warnings: v.warnings });
   }
 
   const note = typeof body.note === 'string' ? body.note : null;
@@ -464,7 +469,7 @@ app.delete('/api/goals/:id', async (req, reply) => {
   const children = childrenOf(req.db, existing.id, 'id, name');
   if (children.length) {
     return reply.code(409).send({
-      error: '存在下级目标，禁止删除（目标链不允许断裂）：请先处理下级目标',
+      error: tr(langOf(req), '存在下级目标，禁止删除（目标链不允许断裂）：请先处理下级目标', 'This goal has sub-goals and cannot be deleted. Handle the sub-goals first.'),
       children
     });
   }
